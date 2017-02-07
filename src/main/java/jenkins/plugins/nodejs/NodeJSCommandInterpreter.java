@@ -5,6 +5,7 @@ import java.util.Collection;
 
 import javax.annotation.CheckForNull;
 
+import org.jenkinsci.Symbol;
 import org.jenkinsci.lib.configprovider.model.Config;
 import org.jenkinsci.plugins.configfiles.GlobalConfigFiles;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -17,16 +18,17 @@ import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Util;
 import hudson.model.AbstractBuild;
+import hudson.model.AbstractProject;
 import hudson.model.BuildListener;
-import hudson.model.Descriptor;
 import hudson.model.Node;
+import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
 import hudson.tasks.CommandInterpreter;
 import hudson.util.ArgumentListBuilder;
 import hudson.util.FormValidation;
 import jenkins.plugins.nodejs.configfiles.NPMConfig;
-import jenkins.plugins.nodejs.configfiles.VerifyConfigProviderException;
 import jenkins.plugins.nodejs.configfiles.NPMConfig.NPMConfigProvider;
+import jenkins.plugins.nodejs.configfiles.VerifyConfigProviderException;
 import jenkins.plugins.nodejs.tools.NodeJSInstallation;
 import jenkins.plugins.nodejs.tools.Platform;
 import jenkins.plugins.nodejs.tools.pathresolvers.FixEnvVarEnvironmentContributingAction;
@@ -94,7 +96,7 @@ public class NodeJSCommandInterpreter extends CommandInterpreter {
                 ni = ni.forNode(node, listener);
                 ni = ni.forEnvironment(env);
                 ni.buildEnvVars(env);
-                nodeExec = ni.getExecutable(launcher);
+                nodeExec = ni.getExecutable();
                 if (nodeExec == null) {
                     throw new AbortException(Messages.NodeJSBuilders_noExecutableFound(ni.getHome()));
                 }
@@ -106,7 +108,11 @@ public class NodeJSCommandInterpreter extends CommandInterpreter {
             }
 
             // add npmrc config
-            NodeJSUtils.supplyConfig(configId, build, listener, env);
+            FilePath configFile = NodeJSUtils.supplyConfig(configId, build, build.getWorkspace(), listener, env);
+            if (configFile != null) {
+                env.put(NodeJSConstants.NPM_USERCONFIG,  configFile.getRemote());
+            }
+
         } catch (AbortException e) {
             listener.fatalError(e.getMessage()); // NOSONAR
             return false;
@@ -152,8 +158,9 @@ public class NodeJSCommandInterpreter extends CommandInterpreter {
      * @author cliffano
      * @author Nikolas Falco
      */
+    @Symbol("nodejsci")
     @Extension
-    public static final class NodeJsDescriptor extends Descriptor<Builder> {
+    public static final class NodeJsDescriptor extends BuildStepDescriptor<Builder> {
         /**
          * Customise the name of this job step.
          *
@@ -198,6 +205,11 @@ public class NodeJSCommandInterpreter extends CommandInterpreter {
                 }
             }
             return FormValidation.ok();
+        }
+
+        @Override
+        public boolean isApplicable(@SuppressWarnings("rawtypes") Class<? extends AbstractProject> jobType) {
+            return true;
         }
 
     }
