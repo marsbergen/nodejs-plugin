@@ -12,6 +12,22 @@ public final class NodeJSConstants {
     public static final String JAVASCRIPT_EXT = ".js";
 
     /**
+     * Default NPM registry.
+     */
+    public static final String DEFAULT_NPM_REGISTRY = "registry.npmjs.org";
+
+    /**
+     * The name of environment variable that point to the NodeJS installation
+     * home.
+     */
+    public static final String ENVVAR_NODEJS_HOME = "NODEJS_HOME";
+
+    /**
+     * The name of environment variable that contribute the PATH value.
+     */
+    public static final String ENVVAR_NODEJS_PATH = "PATH+NODEJS";
+
+    /**
      * The location of user-level configuration settings.
      */
     public static final String NPM_USERCONFIG = "npm_config_userconfig";

@@ -49,6 +49,7 @@ import hudson.tools.ToolInstallation;
 import hudson.tools.ToolInstaller;
 import hudson.tools.ToolProperty;
 import jenkins.plugins.nodejs.Messages;
+import jenkins.plugins.nodejs.NodeJSConstants;
 import jenkins.security.MasterToSlaveCallable;
 import net.sf.json.JSONObject;
 
@@ -103,8 +104,8 @@ public class NodeJSInstallation extends ToolInstallation implements EnvironmentS
         if (home == null) {
             return;
         }
-        env.put("NODEJS_HOME", home);
-        env.override("PATH+NODEJS", getBin());
+        env.put(NodeJSConstants.ENVVAR_NODEJS_HOME, home);
+        env.put(NodeJSConstants.ENVVAR_NODEJS_PATH, getBin());
     }
 
     /**
@@ -143,18 +144,24 @@ public class NodeJSInstallation extends ToolInstallation implements EnvironmentS
      *         Node.
      */
     private String getBin() {
-        String bin = getHome();
+        Platform currentPlatform = null;
         try {
-            Platform currentPlatform = getPlatform();
+            currentPlatform = getPlatform();
+        } catch (DetectionFailedException e) {
+            throw new RuntimeException(e);  // NOSONAR
+        }
+
+        String bin = getHome();
+        if (!"".equals(currentPlatform.binFolder)) {
             switch (currentPlatform) {
             case WINDOWS:
                 bin += '\\' + currentPlatform.binFolder;
                 break;
+            case LINUX:
+            case OSX:
             default:
                 bin += '/' + currentPlatform.binFolder;
             }
-        } catch (DetectionFailedException e) {
-            throw new RuntimeException(e);
         }
 
         return bin;
@@ -168,12 +175,12 @@ public class NodeJSInstallation extends ToolInstallation implements EnvironmentS
             Computer computer = Computer.currentComputer();
             if (computer == null) {
                 // pipeline use case
-                throw new RuntimeException(Messages.NodeJSBuilders_nodeOffline());
+                throw new DetectionFailedException(Messages.NodeJSBuilders_nodeOffline());
             }
 
             Node node = computer.getNode();
             if (node == null) {
-                throw new RuntimeException(Messages.NodeJSBuilders_nodeOffline());
+                throw new DetectionFailedException(Messages.NodeJSBuilders_nodeOffline());
             }
 
             currentPlatform = Platform.of(node);
