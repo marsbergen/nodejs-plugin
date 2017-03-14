@@ -1,12 +1,15 @@
 package jenkins.plugins.nodejs;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import javax.annotation.CheckForNull;
 
 import org.jenkinsci.Symbol;
 import org.jenkinsci.lib.configprovider.model.Config;
+import org.jenkinsci.lib.configprovider.util.ConfigFileManager;
 import org.jenkinsci.plugins.configfiles.GlobalConfigFiles;
+import org.jenkinsci.plugins.configfiles.common.CleanTempFilesAction;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 
@@ -109,9 +112,10 @@ public class NodeJSCommandInterpreter extends CommandInterpreter {
             }
 
             // add npmrc config
-            FilePath configFile = NodeJSUtils.supplyConfig(configId, build, build.getWorkspace(), listener, env);
+            FilePath configFile = ConfigFileManager.provisionConfigFile(configId, null, true, env, build, build.getWorkspace(), listener, new ArrayList<String>());
             if (configFile != null) {
-                newEnv.put(NodeJSConstants.NPM_USERCONFIG,  configFile.getRemote());
+                newEnv.put(NodeJSConstants.NPM_USERCONFIG, configFile.getRemote());
+                build.addAction(new CleanTempFilesAction(configFile.getRemote()));
             }
 
             // add an Environment so when the in super class is called build.getEnviroment() gets the enhanced env
